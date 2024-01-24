@@ -1,9 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:gsm_client/auth/profile_service.dart';
+import 'package:gsm_client/auth/user_service.dart';
 import 'package:gsm_client/components/button.dart';
 import 'package:gsm_client/components/text_field.dart';
+import 'package:gsm_client/pages/profile.dart';
 
 class LoginPage extends StatefulWidget {
-  const LoginPage({super.key});
+  final Function()? goToRegisterPage;
+
+  const LoginPage({
+    super.key,
+    required this.goToRegisterPage,
+  });
 
   @override
   State<LoginPage> createState() => _LoginPageState();
@@ -12,6 +20,37 @@ class LoginPage extends StatefulWidget {
 class _LoginPageState extends State<LoginPage> {
   final emailTextController = TextEditingController();
   final passwordTextController = TextEditingController();
+
+  signInHandler() async {
+    LoginParams loginParams = LoginParams(
+      email: emailTextController.text,
+      password: passwordTextController.text,
+    );
+
+    UserService userService = UserService();
+    LoginResponse loginResponse = await userService.login(loginParams);
+
+    if (loginResponse.statusCode == 200) {
+      ProfileParams profileParams =
+          ProfileParams(authToken: loginResponse.user!.authToken);
+
+      ProfileService profileService = ProfileService();
+
+      ProfileResponse profileResponse =
+          await profileService.getMyProfile(profileParams);
+
+      if (profileResponse.statusCode == 200) {
+        openPage(profileResponse.profile!, loginResponse.user!);
+      }
+    }
+  }
+
+  openPage(Profile profile, User user) {
+    Navigator.push(
+        context,
+        MaterialPageRoute(
+            builder: (context) => ProfilePage(profile: profile, user: user)));
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -61,7 +100,7 @@ class _LoginPageState extends State<LoginPage> {
                 const SizedBox(height: 15),
 
                 // sign in button
-                CustomButton(text: "Sign In", onTap: () {}),
+                CustomButton(text: "Sign In", onTap: signInHandler),
 
                 const SizedBox(height: 15),
 
@@ -77,7 +116,7 @@ class _LoginPageState extends State<LoginPage> {
                     ),
                     const SizedBox(width: 5),
                     GestureDetector(
-                      onTap: () {},
+                      onTap: widget.goToRegisterPage,
                       child: Text(
                         "Click to register now",
                         style: TextStyle(
